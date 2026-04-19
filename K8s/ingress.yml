@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inventory-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/group.name: dev-alb #keep this same among other services otherwise k8s will create separate alb for each service
+    alb.ingress.kubernetes.io/healthcheck-path: /api/inventory/health
+
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /api/inventory
+            pathType: Prefix
+            backend:
+              service:
+                name: inventory-service
+                port:
+                  number: 80
