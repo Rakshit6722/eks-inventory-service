@@ -1,3 +1,5 @@
 K8s
 Dockerfile
 API.md
+.env
+node_modules

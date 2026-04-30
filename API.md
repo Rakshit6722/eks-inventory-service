@@ -118,3 +118,50 @@ Base path: `/api/inventory`
 ### Error Responses
 
 - None defined for normal operation.
+
+---
+
+## 4) Database Health Check
+
+- **Method:** `GET`
+- **Path:** `/api/inventory/db-health`
+- **Description:** Verifies Postgres connectivity with a simple `SELECT 1`.
+
+### Success Responses
+
+- **200 OK** (DB configured and reachable)
+
+```json
+{
+  "service": "inventory-service",
+  "database": "connected",
+  "status": "ok",
+  "result": { "ok": true, "latencyMs": 12 },
+  "timestamp": "2026-04-30T12:00:00.000Z"
+}
+```
+
+- **200 OK** (DB not configured)
+
+```json
+{
+  "service": "inventory-service",
+  "database": "not configured",
+  "status": "ok",
+  "timestamp": "2026-04-30T12:00:00.000Z"
+}
+```
+
+### Error Responses
+
+- **503 Service Unavailable** (DB configured but not reachable)
+
+```json
+{
+  "service": "inventory-service",
+  "database": "unreachable",
+  "status": "error",
+  "error": "...",
+  "timestamp": "2026-04-30T12:00:00.000Z"
+}
+```

@@ -1,6 +1,8 @@
 require('dotenv').config();
 
+
 const express = require('express');
+const { checkDatabase, hasDatabaseConfig, initAndSeed, getItemById, reserveItem, countItems } = require('./pg');
 
 const app = express();
 app.use(express.json());
@@ -8,6 +10,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 const BASE_PATH = '/api/inventory';
 
+// seed data used when initializing DB (only inserted if item id doesn't exist)
 const items = {
   'item-1': { id: 'item-1', name: 'Wireless Mouse', price: 24.99, stock: 25 },
   'item-2': { id: 'item-2', name: 'Mechanical Keyboard', price: 79.99, stock: 15 },
@@ -16,26 +19,52 @@ const items = {
   'item-5': { id: 'item-5', name: 'Noise-Canceling Headset', price: 149.0, stock: 12 }
 };
 
-app.get(`${BASE_PATH}/items/:id`, (req, res) => {
-  const item = items[req.params.id];
-
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
+app.get(`${BASE_PATH}/items/:id`, async (req, res) => {
+  const id = req.params.id;
+  if (hasDatabaseConfig()) {
+    try {
+      const item = await getItemById(id);
+      if (!item) return res.status(404).json({ error: 'Item not found' });
+      return res.json(item);
+    } catch (err) {
+      console.error('db get item error', err);
+      return res.status(500).json({ error: 'internal error' });
+    }
   }
 
+  const item = items[id];
+  if (!item) return res.status(404).json({ error: 'Item not found' });
   return res.json(item);
 });
 
-app.post(`${BASE_PATH}/items/:id/reserve`, (req, res) => {
-  const item = items[req.params.id];
+app.post(`${BASE_PATH}/items/:id/reserve`, async (req, res) => {
+  const id = req.params.id;
   const quantity = req.body.quantity ?? 1;
-
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
-  }
 
   if (!Number.isInteger(quantity) || quantity <= 0) {
     return res.status(400).json({ error: 'quantity must be a positive integer' });
+  }
+
+  if (hasDatabaseConfig()) {
+    try {
+      const result = await reserveItem(id, quantity);
+      return res.json({
+        message: 'Stock reserved',
+        itemId: id,
+        reserved: quantity,
+        remainingStock: result.remainingStock
+      });
+    } catch (err) {
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ error: 'Item not found' });
+      if (err.code === 'INSUFFICIENT') return res.status(409).json({ error: 'Insufficient stock', itemId: id, requested: quantity, available: err.available });
+      console.error('db reserve error', err);
+      return res.status(500).json({ error: 'internal error' });
+    }
+  }
+
+  const item = items[id];
+  if (!item) {
+    return res.status(404).json({ error: 'Item not found' });
   }
 
   if (item.stock < quantity) {
@@ -57,18 +86,76 @@ app.post(`${BASE_PATH}/items/:id/reserve`, (req, res) => {
   });
 });
 
-app.get(`${BASE_PATH}/health`, (req, res) => {
-  const hasDatabase = !!(process.env.DATABASE_URL || process.env.DB_HOST);
-  res.json({
+app.get(`${BASE_PATH}/health`, async (req, res) => {
+  const base = {
     service: 'inventory-service',
     status: 'ok',
-    database: hasDatabase ? 'configured' : 'not configured',
-    databaseUrl: process.env.DATABASE_URL || null,
-    totalItems: Object.keys(items).length,
+    database: hasDatabaseConfig() ? 'configured' : 'not configured',
+    databaseUrl: process.env.DATABASE_URL ? 'set' : null,
     timestamp: new Date().toISOString()
-  });
+  };
+
+  if (hasDatabaseConfig()) {
+    try {
+      const total = await countItems();
+      return res.json({ ...base, totalItems: total });
+    } catch (err) {
+      console.error('health count items error', err);
+      return res.json({ ...base, totalItems: null });
+    }
+  }
+
+  return res.json({ ...base, totalItems: Object.keys(items).length });
+});
+
+app.get(`${BASE_PATH}/db-health`, async (req, res) => {
+  if (!hasDatabaseConfig()) {
+    return res.status(200).json({
+      service: 'inventory-service',
+      database: 'not configured',
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  try {
+    const result = await checkDatabase();
+    return res.status(200).json({
+      service: 'inventory-service',
+      database: 'connected',
+      status: 'ok',
+      result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    return res.status(503).json({
+      service: 'inventory-service',
+      database: 'unreachable',
+      status: 'error',
+      error: error?.message ?? String(error),
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.listen(PORT, () => {
   console.log(`inventory-service listening on port ${PORT}`);
+
+  if (hasDatabaseConfig()) {
+    checkDatabase()
+      .then((result) => {
+        console.log('Postgres connectivity check succeeded', result);
+      })
+      .catch((error) => {
+        console.error('Postgres connectivity check failed', error?.message ?? error);
+      });
+
+    initAndSeed(items)
+      .then(() => {
+        console.log('Postgres schema initialized and seed data ensured');
+      })
+      .catch((error) => {
+        console.error('Postgres schema initialization failed', error?.message ?? error);
+      });
+  }
 });

@@ -11,29 +11,29 @@ spec:
   selector:
     matchLabels:
       app: inventory-app
-  
+
   template:
     metadata:
       labels:
         app: inventory-app
-    
+
     spec:
       containers:
-        - name:   -api
-          image: 120966300656.dkr.ecr.ap-south-1.amazonaws.com/dev-rakshit:inventory-1
-          ports:
-            - containerPort: 3001
+      - name: -api
+        image: 120966300656.dkr.ecr.ap-south-1.amazonaws.com/dev-rakshit:inventory-1
+        ports:
+        - containerPort: 3001
 
-          livenessProbe:
-            httpGet:
-              path: /api/inventory/health
-              port: 3001
-            initialDelaySeconds: 10
-            periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/inventory/health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10
 
-          readinessProbe:
-            httpGet:
-              path: /api/inventory/health
-              port: 3001
-            initialDelaySeconds: 10
-            periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/inventory/health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10
