@@ -138,24 +138,26 @@ app.get(`${BASE_PATH}/db-health`, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`inventory-service listening on port ${PORT}`);
-
-  if (hasDatabaseConfig()) {
-    checkDatabase()
-      .then((result) => {
-        console.log('Postgres connectivity check succeeded', result);
-      })
-      .catch((error) => {
-        console.error('Postgres connectivity check failed', error?.message ?? error);
-      });
-
-    initAndSeed(items)
-      .then(() => {
-        console.log('Postgres schema initialized and seed data ensured');
-      })
-      .catch((error) => {
-        console.error('Postgres schema initialization failed', error?.message ?? error);
-      });
+async function start() {
+  if (!hasDatabaseConfig()) {
+    console.error('inventory-service will not start: database configuration is missing');
+    process.exit(1);
   }
-});
+
+  try {
+    const result = await checkDatabase();
+    console.log('Postgres connectivity check succeeded', result);
+
+    await initAndSeed(items);
+    console.log('Postgres schema initialized and seed data ensured');
+
+    app.listen(PORT, () => {
+      console.log(`inventory-service listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('inventory-service will not start because Postgres is unavailable', error?.message ?? error);
+    process.exit(1);
+  }
+}
+
+start();

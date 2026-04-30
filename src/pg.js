@@ -28,7 +28,7 @@ function getPool() {
           port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
           database: process.env.DB_NAME,
           user: process.env.DB_USER,
-          password: 'L~rE7[5fzxe5[TkX?mcnE:pIX#vM',
+          password: "L~rE7[5fzxe5[TkX?mcnE:pIX#vM",
           ssl
         }
   );
