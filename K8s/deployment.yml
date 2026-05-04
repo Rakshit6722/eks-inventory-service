@@ -7,7 +7,7 @@ metadata:
     app: inventory-app
 
 spec:
-  replicasA: 2
+  replicas: 1
   selector:
     matchLabels:
       app: inventory-app
@@ -23,6 +23,15 @@ spec:
         image: 120966300656.dkr.ecr.ap-south-1.amazonaws.com/dev-rakshit:inventory-6
         ports:
         - containerPort: 3001
+
+
+      resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "300m"
+        memory: "512Mi"
 
         livenessProbe:
           httpGet:
