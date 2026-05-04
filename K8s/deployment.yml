@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: inventory-api
-        image: 120966300656.dkr.ecr.ap-south-1.amazonaws.com/dev-rakshit:inventory-15
+        image: 120966300656.dkr.ecr.ap-south-1.amazonaws.com/dev-rakshit:inventory-16
         ports:
         - containerPort: 3001
 
