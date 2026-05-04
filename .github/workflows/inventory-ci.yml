@@ -3,6 +3,7 @@ name: Build and Push to ECR (OIDC)
 on:
   push:
     branches: [ main ]
+    
 
 permissions:
   id-token: write # REQUIRED for OIDC
