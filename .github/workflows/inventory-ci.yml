@@ -6,7 +6,7 @@ on:
 
 permissions:
   id-token: write # REQUIRED for OIDC
-  contents: read
+  contents: write
 
 env:
   AWS_REGION: ap-south-1
